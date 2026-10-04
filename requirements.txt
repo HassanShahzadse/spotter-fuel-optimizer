@@ -1,0 +1,10 @@
+Django==6.1.1
+djangorestframework==3.18.1
+drf-spectacular==0.30.0
+django-environ==0.14.0
+django-cors-headers==4.9.0
+requests==2.34.2
+numpy==2.5.3
+scipy==1.18.1
+zipcodes==3.0.0
+whitenoise==6.12.0

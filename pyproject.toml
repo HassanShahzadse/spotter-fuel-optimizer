@@ -1,0 +1,21 @@
+[project]
+name = "fuel-route-api"
+version = "1.0.0"
+description = "Django REST API: US route planning with cost-optimal fuel stops"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings_test"
+python_files = ["test_*.py"]
+addopts = "-q --strict-markers -m 'not live'"
+markers = ["live: calls the real routing/geocoding APIs (run with: pytest -m live)"]
+filterwarnings = ["ignore:No directory at:UserWarning"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["apps/*/migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "DJ", "SIM", "RUF"]
+ignore = ["RUF012"]

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Map tile servers require a Referer header; Django's default "same-origin" policy would strip it. -->
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Route: {{ plan.start.label }} → {{ plan.finish.label }}</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <style>
+    :root { --bg:#f7f7f5; --panel:#fff; --ink:#1d2433; --muted:#667085; --line:#e4e7ec; --accent:#0b6bcb; --fuel:#d9480f; }
+    * { box-sizing:border-box; }
+    body { margin:0; font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; color:var(--ink); background:var(--bg); }
+    .layout { display:grid; grid-template-columns: 380px 1fr; height:100vh; }
+    aside { background:var(--panel); border-right:1px solid var(--line); overflow-y:auto; padding:20px; }
+    #map { height:100vh; }
+    h1 { font-size:17px; margin:0 0 4px; }
+    .sub { color:var(--muted); margin:0 0 16px; }
+    .stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:18px; }
+    .stat { border:1px solid var(--line); border-radius:8px; padding:10px; }
+    .stat b { display:block; font-size:18px; font-variant-numeric:tabular-nums; }
+    .stat span { color:var(--muted); font-size:12px; }
+    .stat.total { grid-column: span 2; background:#f0f6ff; border-color:#cfe2ff; }
+    ol { list-style:none; padding:0; margin:0; }
+    li { border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:8px; cursor:pointer; }
+    li:hover { border-color:var(--accent); }
+    .n { display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--fuel); color:#fff; font-size:12px; font-weight:600; margin-right:6px; }
+    .row { display:flex; justify-content:space-between; color:var(--muted); font-size:12px; margin-top:4px; font-variant-numeric:tabular-nums; }
+    .pin { width:24px; height:24px; border-radius:50%; background:var(--fuel); color:#fff; display:grid; place-items:center; font-weight:700; font-size:12px; border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.4); }
+    .fit-btn { display:block; width:34px; height:34px; line-height:34px; text-align:center; font-size:18px; background:#fff; color:#1d2433; text-decoration:none; }
+    .pin.start { background:#2b8a3e; } .pin.finish { background:#1d2433; }
+    @media (max-width: 760px) { .layout { grid-template-columns:1fr; height:auto; } #map { height:60vh; } }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <h1>{{ plan.start.label }} → {{ plan.finish.label }}</h1>
+    <p class="sub">{{ plan.summary.total_distance_miles }} mi · {{ plan.summary.estimated_duration_hours }} h · {{ plan.vehicle.max_range_miles|floatformat:0 }} mi range @ {{ plan.vehicle.mpg|floatformat:0 }} MPG</p>
+    <div class="stats">
+      <div class="stat total"><b>${{ plan.summary.total_fuel_cost_usd|floatformat:2 }}</b><span>Refueling cost</span></div>
+      <div class="stat"><b>{{ plan.summary.number_of_fuel_stops }}</b><span>Fuel stops</span></div>
+      <div class="stat"><b>{{ plan.summary.total_gallons_purchased|floatformat:1 }}</b><span>Gallons purchased</span></div>
+      <div class="stat"><b>{% if plan.summary.average_price_per_gallon %}${{ plan.summary.average_price_per_gallon|floatformat:3 }}{% else %}—{% endif %}</b><span>Avg price / gal</span></div>
+      <div class="stat"><b>{{ plan.summary.total_gallons_consumed|floatformat:1 }}</b><span>Gallons burned</span></div>
+    </div>
+    <ol id="stops">
+      {% for s in plan.fuel_stops %}
+      <li data-i="{{ forloop.counter0 }}">
+        <div><span class="n">{{ s.stop_number }}</span><b>{{ s.station.name }}</b></div>
+        <div class="row"><span>{{ s.station.city }}, {{ s.station.state }} · mile {{ s.mile_marker|floatformat:0 }}</span><span>${{ s.price_per_gallon|floatformat:3 }}/gal</span></div>
+        <div class="row"><span>{{ s.gallons_purchased|floatformat:1 }} gal</span><b>${{ s.cost_usd|floatformat:2 }}</b></div>
+      </li>
+      {% empty %}
+      <li>No fuel stop needed for this trip.</li>
+      {% endfor %}
+    </ol>
+  </aside>
+  <div id="map"></div>
+</div>
+{{ plan|json_script:"plan-data" }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+  const plan = JSON.parse(document.getElementById("plan-data").textContent);
+  const map = L.map("map");
+  // OSM tiles need a Referer header (sent via referrerPolicy). If OSM refuses a tile, switch to Esri once.
+  const tileOptions = { maxZoom: 18, referrerPolicy: "strict-origin-when-cross-origin" };
+  const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    ...tileOptions,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+  let fellBack = false;
+  osm.on("tileerror", () => {
+    if (fellBack) return;
+    fellBack = true;
+    map.removeLayer(osm);
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+      ...tileOptions,
+      attribution: 'Tiles &copy; <a href="https://www.esri.com">Esri</a> &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
+    }).addTo(map);
+  });
+
+  const icon = (cls, text) => L.divIcon({ className: "", html: `<div class="pin ${cls}">${text}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] });
+  const esc = (s) => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const markers = [];
+  const layer = L.geoJSON(plan.map.geojson, {
+    style: { color: "#0b6bcb", weight: 4, opacity: 0.85 },
+    pointToLayer: (f, latlng) => {
+      const p = f.properties;
+      if (p.kind === "start") return L.marker(latlng, { icon: icon("start", "A") }).bindPopup(`<b>Start</b><br>${esc(p.label)}`);
+      if (p.kind === "finish") return L.marker(latlng, { icon: icon("finish", "B") }).bindPopup(`<b>Finish</b><br>${esc(p.label)}`);
+      const m = L.marker(latlng, { icon: icon("", p.stop_number) }).bindPopup(
+        `<b>#${p.stop_number} ${esc(p.name)}</b><br>${esc(p.address)}<br>` +
+        `$${p.price_per_gallon.toFixed(3)}/gal · ${p.gallons_purchased.toFixed(1)} gal · <b>$${p.cost_usd.toFixed(2)}</b><br>mile ${Math.round(p.mile_marker)}`);
+      markers.push(m);
+      return m;
+    }
+  }).addTo(map);
+  // Fit again after load, once the map knows its final size.
+  const fit = () => { map.invalidateSize(); map.fitBounds(layer.getBounds(), { padding: [40, 40] }); };
+  fit();
+  window.addEventListener("load", fit);
+
+  // Button under the zoom controls that zooms back out to the whole route.
+  const FitControl = L.Control.extend({
+    options: { position: "topleft" },
+    onAdd() {
+      const a = L.DomUtil.create("a", "leaflet-bar fit-btn");
+      a.href = "#"; a.title = "Show the whole route"; a.textContent = "⤢";
+      L.DomEvent.on(a, "click", (e) => { L.DomEvent.preventDefault(e); fit(); });
+      return a;
+    }
+  });
+  map.addControl(new FitControl());
+  document.querySelectorAll("#stops li[data-i]").forEach(li => li.addEventListener("click", () => {
+    const m = markers[+li.dataset.i]; map.setView(m.getLatLng(), 11); m.openPopup();
+  }));
+</script>
+</body>
+</html>

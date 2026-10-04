@@ -1,0 +1,470 @@
+{
+	"info": {
+		"name": "Fuel Route Optimizer API",
+		"description": "Route + cost-optimal fuel stops (500 mi range, 10 MPG). Set base_url to your server.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Route planning",
+			"item": [
+				{
+					"name": "Plan route — New York → Los Angeles",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/route/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"route",
+								""
+							]
+						},
+						"description": "Coast-to-coast: multiple fuel stops. Run twice to see meta.cached = true.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"start\": \"New York, NY\",\n  \"finish\": \"Los Angeles, CA\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"const d = pm.response.json();",
+									"pm.collectionVariables.set('plan_id', d.map_url.split('/route/')[1].split('/')[0]);",
+									"pm.test('has fuel stops + total cost', () => { pm.expect(d).to.have.property('total_fuel_cost'); pm.expect(d.fuel_stops).to.be.an('array'); });",
+									"pm.test('at most 1 routing API call', () => pm.expect(d.meta.routing_api_calls).to.be.at.most(1));",
+									"console.log('Total fuel cost: $' + d.total_fuel_cost + ' | stops: ' + d.fuel_stops.length + ' | map: ' + d.map_url);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Plan route — Chicago → Houston",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/route/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"route",
+								""
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"start\": \"Chicago, IL\",\n  \"finish\": \"Houston, TX\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"const d = pm.response.json();",
+									"pm.collectionVariables.set('plan_id', d.map_url.split('/route/')[1].split('/')[0]);",
+									"pm.test('has fuel stops + total cost', () => { pm.expect(d).to.have.property('total_fuel_cost'); pm.expect(d.fuel_stops).to.be.an('array'); });",
+									"pm.test('at most 1 routing API call', () => pm.expect(d.meta.routing_api_calls).to.be.at.most(1));",
+									"console.log('Total fuel cost: $' + d.total_fuel_cost + ' | stops: ' + d.fuel_stops.length + ' | map: ' + d.map_url);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Plan route — Dallas → Houston (short trip)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/route/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"route",
+								""
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"start\": \"Dallas, TX\",\n  \"finish\": \"Houston, TX\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"const d = pm.response.json();",
+									"pm.collectionVariables.set('plan_id', d.map_url.split('/route/')[1].split('/')[0]);",
+									"pm.test('has fuel stops + total cost', () => { pm.expect(d).to.have.property('total_fuel_cost'); pm.expect(d.fuel_stops).to.be.an('array'); });",
+									"pm.test('at most 1 routing API call', () => pm.expect(d.meta.routing_api_calls).to.be.at.most(1));",
+									"console.log('Total fuel cost: $' + d.total_fuel_cost + ' | stops: ' + d.fuel_stops.length + ' | map: ' + d.map_url);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Plan route — ZIP codes",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/route/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"route",
+								""
+							]
+						},
+						"description": "Seattle → Miami by ZIP code",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"start\": \"98101\",\n  \"finish\": \"33101\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"const d = pm.response.json();",
+									"pm.collectionVariables.set('plan_id', d.map_url.split('/route/')[1].split('/')[0]);",
+									"pm.test('has fuel stops + total cost', () => { pm.expect(d).to.have.property('total_fuel_cost'); pm.expect(d.fuel_stops).to.be.an('array'); });",
+									"pm.test('at most 1 routing API call', () => pm.expect(d.meta.routing_api_calls).to.be.at.most(1));",
+									"console.log('Total fuel cost: $' + d.total_fuel_cost + ' | stops: ' + d.fuel_stops.length + ' | map: ' + d.map_url);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Plan route — coordinates",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/route/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"route",
+								""
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"start\": {\n    \"lat\": 39.7392,\n    \"lng\": -104.9903\n  },\n  \"finish\": {\n    \"lat\": 36.1699,\n    \"lng\": -115.1398\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"const d = pm.response.json();",
+									"pm.collectionVariables.set('plan_id', d.map_url.split('/route/')[1].split('/')[0]);",
+									"pm.test('has fuel stops + total cost', () => { pm.expect(d).to.have.property('total_fuel_cost'); pm.expect(d.fuel_stops).to.be.an('array'); });",
+									"pm.test('at most 1 routing API call', () => pm.expect(d.meta.routing_api_calls).to.be.at.most(1));",
+									"console.log('Total fuel cost: $' + d.total_fuel_cost + ' | stops: ' + d.fuel_stops.length + ' | map: ' + d.map_url);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Plan route — all options",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/route/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"route",
+								""
+							]
+						},
+						"description": "Start with an empty tank (fuel up near the start), strict cheapest-fuel plan, no route polyline",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"start\": \"Atlanta, GA\",\n  \"finish\": \"Denver, CO\",\n  \"corridor_miles\": 15,\n  \"start_fuel_level\": 0,\n  \"stop_penalty_usd\": 0,\n  \"include_geometry\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"const d = pm.response.json();",
+									"pm.collectionVariables.set('plan_id', d.map_url.split('/route/')[1].split('/')[0]);",
+									"pm.test('has fuel stops + total cost', () => { pm.expect(d).to.have.property('total_fuel_cost'); pm.expect(d.fuel_stops).to.be.an('array'); });",
+									"pm.test('at most 1 routing API call', () => pm.expect(d.meta.routing_api_calls).to.be.at.most(1));",
+									"console.log('Total fuel cost: $' + d.total_fuel_cost + ' | stops: ' + d.fuel_stops.length + ' | map: ' + d.map_url);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Plan route — GET variant",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/route/?start=Phoenix, AZ&finish=San Antonio, TX",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"route",
+								""
+							],
+							"query": [
+								{
+									"key": "start",
+									"value": "Phoenix, AZ"
+								},
+								{
+									"key": "finish",
+									"value": "San Antonio, TX"
+								}
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('200 OK', () => pm.response.to.have.status(200));",
+									"const d = pm.response.json();",
+									"pm.collectionVariables.set('plan_id', d.map_url.split('/route/')[1].split('/')[0]);",
+									"pm.test('has fuel stops + total cost', () => { pm.expect(d).to.have.property('total_fuel_cost'); pm.expect(d.fuel_stops).to.be.an('array'); });",
+									"pm.test('at most 1 routing API call', () => pm.expect(d.meta.routing_api_calls).to.be.at.most(1));",
+									"console.log('Total fuel cost: $' + d.total_fuel_cost + ' | stops: ' + d.fuel_stops.length + ' | map: ' + d.map_url);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Open map of last plan (HTML)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/route/{{plan_id}}/map/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"route",
+								"{{plan_id}}",
+								"map",
+								""
+							]
+						},
+						"description": "Open in a browser for the interactive Leaflet map."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Health check",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/v1/health/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"health",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List cheapest stations in Texas",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/v1/stations/?state=TX&ordering=retail_price&limit=10",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"stations",
+						""
+					],
+					"query": [
+						{
+							"key": "state",
+							"value": "TX"
+						},
+						{
+							"key": "ordering",
+							"value": "retail_price"
+						},
+						{
+							"key": "limit",
+							"value": "10"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://127.0.0.1:8000"
+		},
+		{
+			"key": "plan_id",
+			"value": ""
+		}
+	]
+}

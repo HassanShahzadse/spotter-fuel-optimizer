@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+db.sqlite3
+staticfiles/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.DS_Store
+.idea/
+.vscode/
+.cache/
+
+# Postman local workspace files (the shared collection is the .json in the repo root)
+.postman/
+postman/
